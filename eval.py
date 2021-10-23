@@ -1,33 +1,29 @@
-# Copyright 2017 Google Inc. All Rights Reserved.
+# Copyright 2021 The Magenta Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Lint as: python3
 """Piano Genie continuous eval script."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from collections import defaultdict
+import collections
 import os
 import time
-
-import numpy as np
-import tensorflow as tf
 
 from magenta.models.piano_genie import gold
 from magenta.models.piano_genie.configs import get_named_config
 from magenta.models.piano_genie.loader import load_noteseqs
 from magenta.models.piano_genie.model import build_genie_model
+import numpy as np
+import tensorflow.compat.v1 as tf
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -36,7 +32,8 @@ flags.DEFINE_string("dataset_fp", "./data/valid*.tfrecord",
                     "Path to dataset containing TFRecords of NoteSequences.")
 flags.DEFINE_string("train_dir", "", "The directory for this experiment.")
 flags.DEFINE_string("eval_dir", "", "The directory for evaluation output.")
-flags.DEFINE_string("model_cfg", "stp_iq_auto", "Hyperparameter configuration.")
+flags.DEFINE_string("model_cfg", "piano_genie_paper",
+                    "Hyperparameter configuration.")
 flags.DEFINE_string("model_cfg_overrides", "",
                     "E.g. rnn_nlayers=4,rnn_nunits=256")
 flags.DEFINE_string("ckpt_fp", None,
@@ -95,8 +92,7 @@ def main(unused_argv):
           seq_varlens=gold_seq_varlens)
 
     gold_encodings = gold_model_dict[
-        "stp_emb_vq_discrete"] if cfg.stp_emb_vq else gold_model_dict[
-            "stp_emb_iq_discrete"]
+        "stp_emb_vq_discrete" if cfg.stp_emb_vq else "stp_emb_iq_discrete"]
     gold_mask = tf.sequence_mask(
         gold_seq_varlens, maxlen=gold_seq_maxlen, dtype=tf.float32)
     gold_diff = tf.cast(gold_buttons, tf.float32) - tf.cast(
@@ -179,7 +175,7 @@ def main(unused_argv):
 
   def _eval_all(sess):
     """Gathers all metrics for a ckpt."""
-    summaries = defaultdict(list)
+    summaries = collections.defaultdict(list)
 
     if eval_gold:
       for midi_notes, buttons, seq_varlen in gold.gold_iterator([-6, 6]):
@@ -246,9 +242,10 @@ def main(unused_argv):
       print("-" * 80)
       print("Ckpt: {}".format(FLAGS.ckpt_fp))
       print("Step: {}".format(ckpt_step))
-      for n, l in sorted(ckpt_summaries.items(), key=lambda x: x[0]):
+      for n, l in sorted(list(ckpt_summaries.items()), key=lambda x: x[0]):
         print("{}: {}".format(n, np.mean(l)))
 
 
 if __name__ == "__main__":
+  tf.disable_v2_behavior()
   tf.app.run()

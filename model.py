@@ -1,26 +1,25 @@
-# Copyright 2018 Google Inc. All Rights Reserved.
+# Copyright 2021 The Magenta Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Lint as: python3
 """Constructs a Piano Genie model."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import sonnet as snt
-import tensorflow as tf
-
+from magenta.contrib import rnn as contrib_rnn
 from magenta.models.piano_genie import util
+import tensorflow.compat.v1 as tf
+
+rnn = tf.nn.rnn_cell
 
 
 def simple_lstm_encoder(features,
@@ -37,12 +36,12 @@ def simple_lstm_encoder(features,
     x = tf.layers.dense(x, rnn_nunits)
 
   if rnn_celltype == "lstm":
-    celltype = tf.contrib.rnn.LSTMBlockCell
+    celltype = contrib_rnn.LSTMBlockCell
   else:
     raise NotImplementedError()
 
-  cell = tf.contrib.rnn.MultiRNNCell(
-      [celltype(rnn_nunits) for _ in xrange(rnn_nlayers)])
+  cell = rnn.MultiRNNCell(
+      [celltype(rnn_nunits) for _ in range(rnn_nlayers)])
 
   with tf.variable_scope("rnn"):
     if rnn_bidirectional:
@@ -79,12 +78,12 @@ def simple_lstm_decoder(features,
     x = tf.layers.dense(x, rnn_nunits)
 
   if rnn_celltype == "lstm":
-    celltype = tf.contrib.rnn.LSTMBlockCell
+    celltype = contrib_rnn.LSTMBlockCell
   else:
     raise NotImplementedError()
 
-  cell = tf.contrib.rnn.MultiRNNCell(
-      [celltype(rnn_nunits) for _ in xrange(rnn_nlayers)])
+  cell = rnn.MultiRNNCell(
+      [celltype(rnn_nunits) for _ in range(rnn_nlayers)])
 
   with tf.variable_scope("rnn"):
     initial_state = cell.zero_state(batch_size, dtype)
@@ -195,6 +194,7 @@ def build_genie_model(feat_dict,
 
   # Quantized step embeddings with VQ-VAE
   if cfg.stp_emb_vq:
+    import sonnet as snt  # pylint:disable=g-import-not-at-top,import-outside-toplevel
     with tf.variable_scope("stp_emb_vq"):
       with tf.variable_scope("pre_vq"):
         # pre_vq_encoding is tf.float32 of [batch_size, seq_len, embedding_dim]
@@ -283,12 +283,13 @@ def build_genie_model(feat_dict,
           comp_func = lambda x, y: tf.divide(x, y + 1e-6)
         else:
           raise NotImplementedError()
+
         stp_emb_iq_contour_penalty = weighted_avg(
             power_func(
                 tf.maximum(
                     cfg.stp_emb_iq_contour_margin - comp_func(
-                        stp_emb_iq_dnotes, stp_emb_iq_dlatents), 0)), None
-            if stp_varlen_mask is None else stp_varlen_mask[:, 1:])
+                        stp_emb_iq_dnotes, stp_emb_iq_dlatents), 0)),
+            None if stp_varlen_mask is None else stp_varlen_mask[:, 1:])
 
         # Regularize to maintain note consistency
         stp_emb_iq_note_held = tf.cast(
@@ -297,18 +298,24 @@ def build_genie_model(feat_dict,
           power_func = tf.abs
         elif cfg.stp_emb_iq_deviate_exp == 2:
           power_func = tf.square
+
+        if stp_varlen_mask is None:
+          mask = stp_emb_iq_note_held
+        else:
+          mask = stp_varlen_mask[:, 1:] * stp_emb_iq_note_held
         stp_emb_iq_deviate_penalty = weighted_avg(
-            power_func(stp_emb_iq_dlatents), stp_emb_iq_note_held
-            if stp_varlen_mask is None else
-            stp_varlen_mask[:, 1:] * stp_emb_iq_note_held)
+            power_func(stp_emb_iq_dlatents), mask)
 
         # Calculate perplexity of discrete encoder posterior
+        if stp_varlen_mask is None:
+          mask = stp_emb_iq_inrange_mask
+        else:
+          mask = stp_varlen_mask * stp_emb_iq_inrange_mask
         stp_emb_iq_discrete_oh = tf.one_hot(stp_emb_iq_discrete,
                                             cfg.stp_emb_iq_nbins)
         stp_emb_iq_avg_probs = weighted_avg(
             stp_emb_iq_discrete_oh,
-            stp_emb_iq_inrange_mask if stp_varlen_mask is None else
-            stp_varlen_mask * stp_emb_iq_inrange_mask,
+            mask,
             axis=[0, 1],
             expand_mask=True)
         stp_emb_iq_discrete_ppl = tf.exp(-tf.reduce_sum(
@@ -462,8 +469,8 @@ def build_genie_model(feat_dict,
 
   # Stats
   if cfg.stp_emb_vq or cfg.stp_emb_iq:
-    discrete = out_dict["stp_emb_vq_discrete"] if cfg.stp_emb_vq else out_dict[
-        "stp_emb_iq_discrete"]
+    discrete = out_dict[
+        "stp_emb_vq_discrete" if cfg.stp_emb_vq else "stp_emb_iq_discrete"]
     dx = pitches[:, 1:] - pitches[:, :-1]
     dy = discrete[:, 1:] - discrete[:, :-1]
     contour_violation = tf.reduce_mean(tf.cast(tf.less(dx * dy, 0), tf.float32))

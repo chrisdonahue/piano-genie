@@ -6,20 +6,20 @@ Piano Genie uses an encoder RNN to compress piano sequences (88 keys) into many 
 
 ### Usage
 
-First, [set up your development environment](/magenta#development-environment). Then, [convert some MIDI files into `NoteSequence` records]((/magenta/scripts/README.md) to build a dataset for Piano Genie.
+First, [set up your development environment](/magenta#development-environment). Then, [convert some MIDI files into `NoteSequence` records](/magenta/scripts/README.md) to build a dataset for Piano Genie.
 
 To train a Piano Genie model, run the following:
 
-```
-bazel run //magenta/models/piano_genie:train -- \
+```bash
+python //magenta/models/piano_genie/train.py \
   --dataset_fp=/tmp/piano_genie/chopin_train.tfrecord \
   --train_dir=/tmp/piano_genie/training_run
 ```
 
 To evaluate a model while it is training, run the following:
 
-```
-bazel run //magenta/models/piano_genie:eval -- \
+```bash
+python magenta/models/piano_genie/eval.py \
   --dataset_fp=/tmp/piano_genie/chopin_validation.tfrecord \
   --train_dir=/tmp/piano_genie/training_run \
   --eval_dir==/tmp/piano_genie/training_run/eval_validation
