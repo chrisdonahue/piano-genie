@@ -1,9 +1,6 @@
 Piano Genie
 ==============
-Have some fun pretending you're a piano virtuoso using machine learning!
 
-Use the **1-8** numbered keys on your keyboard (or the home row **a-f** and **j-;**) or **touch** the coloured blocks to play the piano. Use the **space bar** to control the sustain pedal. 
+Piano Genie allows anyone to improvise on the piano by mapping performances on a miniature 8-button keyboard to realistic performances on a full 88-key piano!
 
-The more you pretend you're a real player, the better the melody (and you!) will sound.
-
-
+This repository is just a standalone clone of the [official Piano Genie demo](http://piano-genie.glitch.me). See the [blog post](https://magenta.tensorflow.org/pianogenie) for more info on Piano Genie, or our recent [ISMIR tutorial](https://github.com/chrisdonahue/music-cocreation-tutorial) for standalone training of Piano Genie.
