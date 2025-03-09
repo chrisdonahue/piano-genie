@@ -199,6 +199,17 @@
                 <span id="midiOutBox" hidden>
                     <select id="selectOut"></select>
                 </span>
+                <br />
+                <label for="midiVelocity">MIDI Output Velocity:</label>
+                <input
+                    type="range"
+                    id="midiVelocity"
+                    name="midiVelocity"
+                    min="0"
+                    max="127"
+                    value="100"
+                />
+                <span id="velocityValue">100</span>
             </p>
 
             <p id="midiNotSupported">

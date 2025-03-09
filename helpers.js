@@ -15,6 +15,7 @@ const CONSTANTS = {
     LOWEST_PIANO_KEY_MIDI_NOTE: 21,
     GENIE_CHECKPOINT:
         "bucket/checkpoints/piano_genie/model/epiano/stp_iq_auto_contour_dt_166006",
+    MIDI_OUT_VELOCITY: 100,
 };
 
 // CMaj scale starting at middle C.
@@ -41,6 +42,7 @@ class Player {
         this.usingMidiIn = false;
         this.selectOutElement = document.getElementById("selectOut");
         this.selectInElement = document.getElementById("selectIn");
+        this.midiOutVelocity = CONSTANTS.MIDI_OUT_VELOCITY;
         this.loadAllSamples();
     }
 
@@ -115,11 +117,15 @@ class Player {
             .join("");
     }
 
+    setMidiOutVelocity(velocity) {
+        this.midiOutVelocity = velocity;
+    }
+
     sendMidiNoteOn(pitch, button) {
         // -1 is sent when releasing the sustain pedal.
         if (button === -1) button = 0;
         //const msg = [0x90 + button, pitch, 0x7f];    // note on, full velocity.
-        const msg = [0x90, pitch, 0x7f]; // note on, full velocity.
+        const msg = [0x90, pitch, this.midiOutVelocity]; // note on, full velocity.
         this.midiOut[this.selectOutElement.selectedIndex].send(msg);
     }
 

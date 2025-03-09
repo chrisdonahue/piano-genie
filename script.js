@@ -71,6 +71,16 @@ function initEverything() {
             (event) => event.target.checked && updateNumButtons(8)
         );
 
+    // MIDI output velocity.
+    document
+        .getElementById("midiVelocity")
+        .addEventListener("input", (event) => {
+            const velocity = event.target.value;
+            player.setMidiOutVelocity(velocity);
+            document.getElementById("velocityValue").textContent = velocity;
+            console.log("🎹 velocity = ", velocity);
+        });
+
     window.addEventListener("resize", onWindowResize);
     window.addEventListener("orientationchange", onWindowResize);
     window.addEventListener(
